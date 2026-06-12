@@ -94,8 +94,8 @@ public class ExampleBlock extends BaseEntityBlock {
 
 ### 导入顺序
 
-* 按照：同项目与第三方库（`com.example.*` / `net.minecraft.*`）、`javax.*`、`java.*` 分组，每组内部按字母升序。
-* 除非从同一个包中导入了超过 6 个类，否则不允许使用通配符导入（`import com.example.*;`）。
+- 按照：同项目与第三方库（如 `com.example.examplemod.*` / `io.netty.buffer.*` / `net.minecraft.*` / `org.joml.*` 等）、`javax.*`、`java.*` 分组，每组内部按字母升序。
+- 除非从同一个包中导入了超过 6 个类，否则不允许使用通配符导入（`import it.unimi.dsi.fastutil.ints.*;`）。
 
 ## 2. 命名约定（强制）
 
@@ -235,7 +235,7 @@ public class CommonEventHandlers {
 
 ## 6. Mixin 使用规则（Fabric Mixin / Sponge Mixin）
 
-* **所有 Mixin 新增的方法和字段必须带 `modid$` 前缀，用美元符号 `$` 分隔**，例如 `example_mod$onTick`、`example_mod$cachedValue`。
+* **所有 Mixin 新增的方法和字段必须带 `modid$` 前缀，用美元符号 `$` 分隔**，例如 `example_mod$onInteract`、`example_mod$cachedValue`。
 
 * 对新增字段使用 `@Unique` 注解时，字段名仍应包含 `modid$` 前缀以避免冲突。
 
@@ -261,8 +261,8 @@ public class SomeClassMixin {
 	@Unique
 	private int example_mod$counter;
 
-	@Inject(method = "init", at = @At("HEAD"))
-	private void example_mod$onInit(CallbackInfo ci) {
+	@Inject(method = "tick", at = @At("HEAD"))
+	private void example_mod$onTick(CallbackInfo ci) {
 		// 注入逻辑
 	}
 }
@@ -333,7 +333,40 @@ tag.putInt("example_mod:player_level", level);
 
 将 PDCA 体现在 PR 模板与任务流程中：每个 PR 必须包含变更目的、影响范围、测试说明、兼容性说明、回退方案。
 
-## 14. 额外约定与常见场景（快速规则集）
+## 14. 代码风格
+
+确认项目对应的 Minecraft 版本和使用的 JDK 版本（如 1.18~1.20.4 通常使用 Java 17，1.20.5~1.21.11 则使用 Java 21，而 26.1 及以上则使用 Java 25），尽量使用现代特性，如：
+
+```java
+// 推荐使用
+List<String> list = Lists.newArrayList();	// 用抽象的类型声明变量（设计上也应满足 Liskov Substitution Principle），并使用 guava 的工厂函数
+
+event.enqueueWork(ModVanillaCompat::init);	// 使用 Method Reference
+
+public record CharacterData(int level, int xp, CharacterType type) {
+}
+
+Math.clamp(time, 10, 20);	// 将 time 限定在 10 到 20 范围内（包含边界）
+
+// 而非
+ArrayList<String> list = new ArrayList<String>();	// 避免容器类型绑定具体实现类，尖括号中也无需填写类型
+
+event.enqueueWork(() -> {	// lambda 体仅有一个现有方法时，转换成方法引用更加优雅
+    ModVanillaCompat.init();
+});
+
+public class CharacterData {
+	final int level;
+	final int xp;
+	final CharacterType type;
+	
+	// 省略三个 getter 和 setter
+}
+
+Math.min(Math.max(time, 10), 20);	// 一个函数就能解决，没必要拆开
+```
+
+## 15. 额外约定与常见场景（快速规则集）
 
 * **暴露公共 API**：任何对其他模组或插件开放的 API 必须在 Javadoc 中声明稳定性与兼容级别（`@since`、`@experimental`）。
 * **依赖与软依赖**：在代码中判定依赖是否存在再调用（避免 ClassNotFoundError），并在 `mods.toml`/`fabric.mod.json` 里注明前置模组。
